@@ -98,7 +98,7 @@ Registers the native function func so that it can be called from the Lua script.
 
 Func can accept any (reasonable) number of arguments of any accepted types and can return one value.  Simplua will automatically handle parameter passing to this function.  If the script attempts to pass the wrong type or the wrong number of arguments, a type_mismatch is thrown (which manifests itself as a script_error).
 
-Valid types are double, int, std::string, std::table<Object, Object>, int(*)(lua_State*), and bool.  Object can also be used and will accept any type passed from the script.  Any of these parameters can be taken by value or by reference to const.
+Valid types are double, int, std::string, std::map<<Object, Object>>, int(*)(lua_State*), and bool.  Object can also be used and will accept any type passed from the script.  Any of these parameters can be taken by value or by reference to const.
 
 ###void loadLib(Lib lib)
 ###void loadLib(Lib lib, const std::string& name)
@@ -117,3 +117,73 @@ Values for lua::Lib are:
     package
 
 The special value lua::Lib::all loads all the standard libraries.
+
+lua::Object
+-----------
+
+An Object represents any possible Lua type stored in native code.  (Lua threads and userdata are not supported yet).  You should generally only use Objects when the API requires it.
+
+Lua types map to C++ types as follows:
+
+    nil: not represented
+    number: double (int is also accepted)
+    string: std::string
+    table: std::map<<Object, Object>>
+    function: int (*)(lua_State*)
+    boolean: bool
+
+###Object()
+Creates an Object initialized to nil.
+
+###Object(const Object& rhs)
+###Object& operator =(const Object& rhs)
+###Object(Object&& rhs)
+###Object& operator =(Object&& rhs)
+Copies or moves the Object as expected.
+
+###bool isNil() const
+###bool isNumber() const
+###bool isInteger() const
+###bool isString() const
+###bool isTable() const
+###bool isFunction() const
+###bool isBoolean() const
+Returns true if the Object's internal type is the one queried.  Use these to avoid exceptions when calling get*.
+
+Note that Integer is not an actual type.  isInteger returns true if the Object is of type Number and the number is exactly an integer.
+
+###LuaNumber getNumber() const;
+###LuaInteger getInteger() const;
+###const LuaString& getString() const;
+###const LuaTable& getTable() const;
+###LuaFunction getFunction() const;
+###LuaBoolean getBoolean() const;
+Get the value stored in the Object.  If the Object's actual type is not the one requested (see above for Integer), it throws a type_mismatch.
+
+###Comparison operators
+The six standard comparison operators (<, >, <=, >=, ==, !=) are defined.  The actual ordering is undefined, but these operators follow normal conventions in almost all cases (not when dealing with NaNs, though).
+
+###static Object makeNil()
+###static Object makeNumber(LuaNumber d = LuaNumber())
+###static Object makeInteger(LuaInteger i = LuaInteger())
+###static Object makeString(const LuaString& s = /* empty string */)
+###static Object makeTable(const LuaTable& m = /* empty table */)
+###static Object makeFunction(LuaFunction f)
+###static Object makeBoolean(LuaBoolean b = LuaBoolean())
+These static functions create an Object containing the provided value.  These are useful for populating tables from within C++.
+
+###std::ostream& operator <<(std::ostream& out, const Object& obj) (global)
+Prints the Object in a sane format.  Functions are displayed as "Function", while the other simple types are displayed as expected.  Tables are printed recursively with indentation.
+
+Cyclic Tables
+-------------
+
+Simplua currently does not handle tables with cycles well.  Simplua.h contains two macros: LUA_MAX_TABLE_RECURSION and LUA_THROW_TABLE_TOO_DEEP.  If the number of nested tables within a table exceeds LUA_MAX_TABLE_RECURSION (default 8), an error occurs.
+
+If LUA_THROW_TABLE_TOO_DEEP is defined, on an error Simplua throws table_too_deep.  If it is not defined, all values in the table deeper than LUA_MAX_TABLE_RECURSION are set to nil.
+
+To mitigate the problem, state.getVariable accepts an ignore list as an optional parameter.  An ignore list is a set of Objects that will be skipped if found when returning a table.
+
+For example, getting all variables in a Lua state through _G would normally result in a table_too_deep exception, as _G contains _G.  If you put lua::Object::makeString("_G") in the ignore list, this source of recursion will disappear.
+
+The issues with cyclic tables may be fixed in future revisions.
