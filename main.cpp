@@ -21,7 +21,7 @@ void testLua()
     state.run();
 
     std::set <lua::Object> ignore{lua::Object::makeString("_G"), lua::Object::makeString("base"), lua::Object::makeString("package")};
-    std::cout << state.getVariable("_G") << std::endl;
+    std::cout << state.getVariable("_G", ignore) << std::endl;
 }
 
 
