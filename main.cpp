@@ -20,8 +20,10 @@ void testLua()
     state.registerFunction("myLib.testFunc", testFunc);
     state.run();
 
+    //Don't traverse the nested _G, base, and package tables, as these are recursive
     std::set <lua::Object> ignore{lua::Object::makeString("_G"), lua::Object::makeString("base"), lua::Object::makeString("package")};
-    std::cout << state.getVariable("_G") << std::endl;
+    //Print all global variables in Lua (except the above)
+    std::cout << state.getVariable("_G", ignore) << std::endl;
 }
 
 

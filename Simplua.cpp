@@ -460,6 +460,8 @@ namespace lua
     static std::string readFile(const std::string& filename)
     {
         std::ifstream t(filename, std::ios::binary);
+        if(!t.is_open())
+            throw compile_error("lua::readFile");
         t.seekg(0, std::ios::end);
         size_t size = t.tellg();
         std::string buffer(size, ' ');
