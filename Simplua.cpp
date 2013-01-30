@@ -413,49 +413,6 @@ namespace lua
     }
 
 
-    void State::internal_registerFunction(const std::string& name, void* func, int(*registered)(lua_State*))
-    {
-        if(!state)
-            throw uninitialized_resource("lua::State::registerFunction");
-
-        int index = lua_gettop(state);
-
-        std::size_t period = name.find('.');
-        if(period != std::string::npos)
-        {
-            lua_getglobal(state, name.substr(0, period).c_str());
-
-            std::size_t last = period + 1;
-            period = name.find('.', period + 1);
-            while(period != std::string::npos)
-            {
-                lua_getfield(state, -1, name.substr(last, period - last).c_str());
-                last = period + 1;
-                period = name.find('.', period + 1);
-            }
-
-            internal::growStack(state, 2);
-            lua_pushstring(state, name.substr(last).c_str());
-            lua_pushlightuserdata(state, func);
-            lua_pushcclosure(state, registered, 1);
-            lua_settable(state, -3);
-        }
-        else
-        {
-            internal::growStack(state, 2);
-            lua_pushlightuserdata(state, func);
-            lua_pushcclosure(state, registered, 1);
-            lua_setglobal(state, name.c_str());
-        }
-
-        lua_settop(state, index);
-
-        //lua_pushlightuserdata(state, func);
-        //lua_pushcclosure(state, registered, 1);
-        //lua_setglobal(state, name.c_str());
-    }
-
-
     //Helper functions for State::loadFile
     static std::string readFile(const std::string& filename)
     {
@@ -967,6 +924,9 @@ namespace lua
 
         LuaTable GetStackVar<LuaTable>::operator()(lua_State* state, int index, int level) const
         {
+        	//don't try to duplicate this functionality
+        	return GetStackVar<Object>()(state, index, internal::emptySet, level).getTable();
+        	/*
             if(level <= 0)
                 throw table_too_deep("lua::GetStackVar<Object>::operator()");
 
@@ -990,6 +950,7 @@ namespace lua
             }
 
             return table;
+            */
         }
 
         LuaFunction GetStackVar<LuaFunction>::operator()(lua_State* state, int index) const
@@ -1005,5 +966,44 @@ namespace lua
                 throw type_mismatch("lua::GetStackVar<LuaBoolean>");
             return lua_toboolean(state, index);
         }
+        
+        
+        void registerFunction(lua_State* state, const std::string& name, void* func, int(*registered)(lua_State*))
+    	{
+        	if(!state)
+            	throw uninitialized_resource("lua::State::registerFunction");
+
+        	int index = lua_gettop(state);
+
+        	std::size_t period = name.find('.');
+        	if(period != std::string::npos)
+        	{
+            	lua_getglobal(state, name.substr(0, period).c_str());
+
+            	std::size_t last = period + 1;
+            	period = name.find('.', period + 1);
+            	while(period != std::string::npos)
+            	{
+                	lua_getfield(state, -1, name.substr(last, period - last).c_str());
+                	last = period + 1;
+                	period = name.find('.', period + 1);
+            	}
+
+            	internal::growStack(state, 2);
+            	lua_pushstring(state, name.substr(last).c_str());
+            	lua_pushlightuserdata(state, func);
+            	lua_pushcclosure(state, registered, 1);
+            	lua_settable(state, -3);
+        	}
+        	else
+        	{
+            	internal::growStack(state, 2);
+            	lua_pushlightuserdata(state, func);
+            	lua_pushcclosure(state, registered, 1);
+            	lua_setglobal(state, name.c_str());
+        	}
+
+        	lua_settop(state, index);
+    	}
     }//namespace internal
 }//namespace lua

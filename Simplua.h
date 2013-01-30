@@ -289,7 +289,6 @@ namespace lua
         extern std::set <Object> emptySet;
         extern std::vector <std::string> emptyVector;
 
-        //this function is defined later
         template <typename T>
         void pushVar(lua_State* state, T t);
 
@@ -570,6 +569,8 @@ namespace lua
             PushVar<S>()(state, s);
             pushArgs <T, Args...>(state, t, args...);
         }
+        
+        void registerFunction(lua_State* state, const std::string& name, void* func, int(*registered)(lua_State*));
     }//namespace internal
 
 
@@ -591,8 +592,6 @@ namespace lua
     class State
     {
         void cleanup();
-
-        void internal_registerFunction(const std::string& name, void* func, int(*registered)(lua_State*));
 
         lua_State* state;
 
@@ -646,7 +645,7 @@ namespace lua
             if(!state)
                 throw uninitialized_resource("lua::State::registerFunction");
 
-            internal::getGlobal(state, function.c_str());//lua_getglobal(state, function.c_str());
+            internal::getGlobal(state, function.c_str());
             internal::pushArgs(state, args...);
 
             return internal::callLuaFunction(state, sizeof...(Args));
@@ -663,7 +662,7 @@ namespace lua
         template <typename R, typename... Args>
         void registerFunction(const std::string& name, R(*func)(Args... args))
         {
-            internal_registerFunction(name, (void*)func, internal::registeredCFunction<R, Args...>);
+            internal::registerFunction(state, name, (void*)func, internal::registeredCFunction<R, Args...>);
         }
 
 
