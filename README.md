@@ -17,6 +17,8 @@ That's it!  Your Lua script can now call TheNameOfTheFunctionInLua with 2 argume
 
 Simplua does not facilitate object oriented programming or any other paradigm beyond what the native Lua API supports.  It simply makes the existing features easier to use.
 
+This library is a work in progress.  Don't expect anything to work yet.
+
 Requirements
 ============
 
